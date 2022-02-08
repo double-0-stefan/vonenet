@@ -13,6 +13,29 @@ class Identity(nn.Module):
         return x
 
 
+class GFB_t(nn.Module):
+    def __init__(self, in_channels, out_channels, kernel_size, stride=4):
+        super().__init__()
+        self.in_channels = in_channels
+        self.out_channels = out_channels
+        self.kernel_size = (kernel_size, kernel_size)
+        self.stride = (stride, stride)
+        self.padding = (kernel_size // 2, kernel_size // 2)
+
+        # Param instatiations
+        self.weight = torch.zeros((out_channels, in_channels, kernel_size, kernel_size))
+
+    def forward(self, x):
+        return F.conv_transpose2d(x, self.weight, None, self.stride, self.padding)
+
+    def initialize(self, sf, theta, sigx, sigy, phase):
+        random_channel = torch.randint(0, self.in_channels, (self.out_channels,))
+        for i in range(self.out_channels):
+            self.weight[i, random_channel[i]] = gabor_kernel(frequency=sf[i], sigma_x=sigx[i], sigma_y=sigy[i],
+                                                             theta=theta[i], offset=phase[i], ks=self.kernel_size[0])
+        self.weight = nn.Parameter(self.weight, requires_grad=False)
+
+
 class GFB(nn.Module):
     def __init__(self, in_channels, out_channels, kernel_size, stride=4):
         super().__init__()
